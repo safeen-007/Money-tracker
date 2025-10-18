@@ -136,6 +136,11 @@ def backup_local():
     shutil.copy('instance/expenses.db', backup_file)
     return jsonify({'message': f'Backup saved to {backup_file}'})
 
+# Vercel handler
+def handler(event, context):
+    from serverless_wsgi import handle_request
+    return handle_request(app, event, context)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

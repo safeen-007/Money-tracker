@@ -6,11 +6,19 @@
 
 # TODO: Deploy to GitHub
 
-- [ ] Check and install Git if necessary
-- [ ] Check and install GitHub CLI (gh) if necessary
-- [ ] Authenticate with GitHub using gh
-- [ ] Initialize Git repository in the project directory
-- [ ] Add all files to Git
-- [ ] Commit the changes
-- [ ] Add the remote repository
-- [ ] Push to the remote repository
+- [x] Check and install Git if necessary
+- [x] Check and install GitHub CLI (gh) if necessary
+- [x] Authenticate with GitHub using gh
+- [x] Initialize Git repository in the project directory
+- [x] Add all files to Git
+- [x] Commit the changes
+- [x] Add the remote repository
+- [x] Push to the remote repository
+
+# TODO: Deploy to Vercel
+
+- [ ] Add serverless-wsgi to requirements.txt
+- [ ] Add Vercel handler to app.py
+- [ ] Create vercel.json configuration file
+- [ ] Commit and push changes to GitHub
+- [ ] Connect GitHub repo to Vercel for deployment
