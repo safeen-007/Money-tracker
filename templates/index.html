@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day-to-Day Expense Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</head>
+<body>
+    <label class="theme-switch" title="Toggle Theme">
+        <input type="checkbox" id="theme-toggle">
+        <span class="slider"></span>
+    </label>
+    <div class="container">
+        <h1>Day-to-Day Expense Tracker</h1>
+
+        <form action="/add" method="post" enctype="multipart/form-data">
+            <label for="date">Date:</label>
+            <input type="date" id="date" name="date" required><br><br>
+            <label for="description">Description:</label>
+            <input type="text" id="description" name="description" required><br><br>
+            <label for="amount">Amount:</label>
+            <input type="number" id="amount" name="amount" step="0.01" required><br><br>
+            <label for="category">Category:</label>
+            <select id="category" name="category" required>
+                <option value="Food">Food</option>
+                <option value="Transportation">Transportation</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Clothing">Clothing</option>
+                <option value="Personal Care">Personal Care</option>
+                <option value="Education">Education</option>
+                <option value="Savings">Savings</option>
+                <option value="Gadgets/Electronics">Gadgets/Electronics</option>
+                <option value="Hobbies">Hobbies</option>
+                <option value="Snacks">Snacks</option>
+                <option value="Gifts">Gifts</option>
+                <option value="Mobile Recharge">Mobile Recharge</option>
+                <option value="Home Rent">Home Rent</option>
+                <option value="Other">Other</option>
+            </select><br><br>
+            <label for="notes">Notes:</label>
+            <textarea id="notes" name="notes" rows="3" cols="50"></textarea><br><br>
+            <label for="receipt">Receipt Image:</label>
+            <input type="file" id="receipt" name="receipt" accept="image/*"><br><br>
+            <button type="submit">Add Expense</button>
+        </form>
+        <form action="/clear" method="post" style="margin-top: 20px;">
+            <button type="submit" style="background-color: #f44336; color: white; border: none; padding: 8px 16px; cursor: pointer;">Clear All Expenses</button>
+        </form>
+        <div style="margin-top: 20px;">
+            <h3>Export & Backup</h3>
+            <a href="/export/excel" style="background-color: #4CAF50; color: white; padding: 8px 16px; text-decoration: none; margin-right: 10px;">Export to Excel</a>
+            <a href="/export/pdf" style="background-color: #2196F3; color: white; padding: 8px 16px; text-decoration: none; margin-right: 10px;">Export to PDF</a>
+            <button onclick="backupLocal()" style="background-color: #FF9800; color: white; border: none; padding: 8px 16px; cursor: pointer;">Backup Locally</button>
+        </div>
+        <h2>Expenses</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Category</th>
+                    <th>Notes</th>
+                    <th>Receipt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.date }}</td>
+                    <td>{{ expense.description }}</td>
+                    <td>₹{{ "%.2f"|format(expense.amount) }}</td>
+                    <td>{{ expense.category }}</td>
+                    <td>{{ expense.notes }}</td>
+                    <td>
+                        {% if expense.receipt %}
+                        <img src="{{ url_for('static', filename=expense.receipt) }}" alt="Receipt" style="max-width: 100px; max-height: 100px;">
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="summary">
+            <h3>Total: ₹{{ "%.2f"|format(total) }}</h3>
+        </div>
+
+
+
+        <h2>Day-to-Day Expenses</h2>
+        <div class="daily-expenses">
+            {% for date, day_expenses in daily_expenses.items() %}
+            <div class="day-expense">
+                <h3>{{ date }}</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Category</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in day_expenses %}
+                        <tr>
+                            <td>{{ expense.description }}</td>
+                            <td>₹{{ "%.2f"|format(expense.amount) }}</td>
+                            <td>{{ expense.category }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="day-total">
+                    <strong>Total for {{ date }}: ₹{{ "%.2f"|format(daily_totals[date]) }}</strong>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <h2>Dashboard / Summary</h2>
+        <div class="dashboard">
+            <div class="chart-container">
+                <h3>Category-wise Spending</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Daily Trends</h3>
+                <canvas id="dailyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Category-wise spending pie chart
+        const categoryData = {{ category_totals | tojson }};
+        const categoryLabels = Object.keys(categoryData);
+        const categoryValues = Object.values(categoryData);
+
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'pie',
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    data: categoryValues,
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                        '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384',
+                        '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ₹' + context.parsed.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Daily trends line chart
+        const dailyData = {{ daily_totals | tojson }};
+        const dailyLabels = Object.keys(dailyData);
+        const dailyValues = Object.values(dailyData);
+
+        const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+        new Chart(dailyCtx, {
+            type: 'line',
+            data: {
+                labels: dailyLabels,
+                datasets: [{
+                    label: 'Daily Expenses',
+                    data: dailyValues,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '₹' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
